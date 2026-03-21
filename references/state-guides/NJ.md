@@ -90,13 +90,21 @@ NJ excludes a portion of retirement income (pensions, annuities, IRA withdrawals
 ### NJ Earned Income Tax Credit
 NJ has its own EITC equal to 40% of the federal EITC.
 
+### NJ Child Tax Credit (new for 2025)
+- **Credit:** Up to $1,000 per dependent age 5 or younger
+- **Income limit:** Taxable income of $80,000 or less
+- **Not available** if Married Filing Separately
+
+**How to ask:** "Do you have children age 5 or under? NJ now offers a child tax credit
+of up to $1,000 per qualifying child."
+
 ---
 
 ## NJ and Federal Differences
 
 | Item | Federal | NJ |
 |------|---------|-----|
-| SALT deduction cap | $10,000 | No cap (property tax deduction up to $15,000) |
+| SALT deduction cap | $40,000 | No cap (property tax deduction up to $15,000) |
 | Standard deduction | Yes | No — NJ uses personal exemptions |
 | Medical expense threshold | 7.5% AGI | 2% NJ gross income |
 | 401(k) contributions | Pre-tax for federal | Taxable for NJ (NJ taxes 401k contributions) |

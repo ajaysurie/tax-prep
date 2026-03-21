@@ -116,8 +116,8 @@ for undergraduate tuition at qualifying institutions.
 
 | Item | Federal | NY |
 |------|---------|-----|
-| Standard deduction | $15,000 (S) / $30,000 (MFJ) | $8,000 (S) / $16,050 (MFJ) |
-| SALT deduction cap | $10,000 | No cap at state level (but addback rules apply) |
+| Standard deduction | $15,750 (S) / $31,500 (MFJ) | $8,000 (S) / $16,050 (MFJ) |
+| SALT deduction cap | $40,000 | No cap at state level (but addback rules apply) |
 | Capital gains | Preferential rates (0/15/20%) | Taxed as ordinary income |
 | 401(k) contributions | Pre-tax | Pre-tax (unlike NJ, NY follows federal) |
 | Social Security | Up to 85% taxable | Fully exempt from NY tax |

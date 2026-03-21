@@ -12,7 +12,7 @@ Anyone with financial complexity beyond a single W-2:
 - People with brokerage/investment accounts (1099-B, 1099-DIV, 1099-INT)
 - Side business income (1099-NEC, Schedule C)
 - K-1s from partnerships, S-corps, or angel investments
-- Multi-state filers
+- Multi-state filers (NJ, NY, CA, CT guides included — more states welcome)
 - People who use a CPA and want to hand off a clean, organized package
 - Self-filers who use TurboTax and want to skip manual data entry
 
@@ -78,7 +78,21 @@ cd path/to/tax-prep
 git pull
 ```
 
-Reference files (tax rates, state guides) are updated annually. The `references/tax-data-sources.md` file contains current-year numbers.
+Reference files (tax rates, state guides) are updated annually. The `references/tax-data-sources.md` file contains current-year numbers and an annual update checklist.
+
+### Keeping Tax Data Current
+
+All tax numbers are sourced from official government publications (IRS.gov, FTB.ca.gov,
+tax.ny.gov, nj.gov/treasury, portal.ct.gov/drs). The authoritative sources index at the
+bottom of `references/tax-data-sources.md` lists every source URL used.
+
+To update for a new tax year:
+
+1. Check `references/tax-data-sources.md` — follow the "Annual Update Process" section
+2. Update federal numbers from the IRS Revenue Procedure (published each November)
+3. Update each state guide from the official state tax authority website
+4. Update the federal numbers referenced in each state's comparison table
+5. Update the "Last Verified" date at the bottom of `tax-data-sources.md`
 
 ## Contributing
 
