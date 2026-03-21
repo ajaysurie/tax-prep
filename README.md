@@ -45,7 +45,23 @@ What documents am I still missing?
 
 Claude will detect the skill automatically and walk you through the workflow.
 
-### Option B: Claude Projects (claude.ai)
+### Option B: Claude Skills Upload (claude.ai)
+
+Upload the skill directly to Claude on the web:
+
+1. Download this repo as a ZIP (or `git clone` and zip the `tax-prep/` folder)
+2. Go to [claude.ai](https://claude.ai) → Settings → Skills
+3. Click "Add Skill" and upload the ZIP file
+4. Start a new conversation:
+
+```
+Let's start tax prep for 2025
+```
+
+The skill and all reference files are loaded automatically. CPA package outputs
+as CSV (not Excel), and tax rate verification uses reference file numbers directly.
+
+### Option C: Claude Projects (claude.ai)
 
 1. Go to [claude.ai](https://claude.ai) and create a new Project
 2. In the project knowledge, upload these files from this repo:
@@ -57,12 +73,12 @@ Claude will detect the skill automatically and walk you through the workflow.
 Let's start tax prep for 2025
 ```
 
-Everything works in Projects except: CPA package outputs as CSV (not Excel),
-and tax rate verification uses the reference file numbers directly (no web search).
+Same capabilities as Skills Upload. Use this if you prefer the Projects interface
+or want to add your own additional context to the project.
 
-### Option C: Just Read It
+### Option D: Just Read It
 
-Don't use Claude Code or Projects? The `references/` folder is still useful on its own:
+Don't use Claude? The `references/` folder is still useful on its own:
 
 - `references/document-matrix.md` — what documents you need based on your accounts
 - `references/common-gaps.md` — deductions people commonly miss
@@ -72,7 +88,12 @@ Don't use Claude Code or Projects? The `references/` folder is still useful on i
 
 ## The Workflow
 
-The skill guides you through five phases, one conversation at a time:
+The skill supports two modes:
+
+- **Incremental:** Come back over weeks as documents arrive. Progress is saved between sessions.
+- **All at once:** Have everything ready? Dump all your documents in one session and get your CPA package in a single sitting.
+
+Either way, the skill guides you through five phases:
 
 ```
 Phase 1                Phase 2              Phase 3
@@ -137,6 +158,7 @@ tax-prep/
 ├── CHANGELOG.md                      # What changed in each version
 │
 ├── references/
+│   ├── prior-return-import.md        # Bootstrap from a prior year 1040 PDF
 │   ├── tax-data-sources.md           # 2025 federal numbers + authoritative source URLs
 │   ├── document-matrix.md            # Account type → expected tax forms
 │   ├── situation-questions.md        # Interview question bank
@@ -158,6 +180,19 @@ tax-prep/
 └── state/                            # Gitignored — runtime only
     └── .gitkeep
 ```
+
+## Optional: Financial Data Integrations (MCP)
+
+If you use Claude Code, you can connect financial data sources via MCP servers. The
+skill automatically detects available MCP tools at startup and uses them to pull
+account lists and transaction data — no CSV exports needed.
+
+Nothing is required. Without MCP, you upload CSVs or enter data manually. With MCP,
+account discovery and reconciliation happen automatically.
+
+Install any MCP server that provides financial data (accounts, transactions, holdings).
+The skill adapts to whatever is available. Example: if you use Monarch Money, search
+GitHub for "monarch money mcp" and follow their install instructions.
 
 ## Data Privacy
 

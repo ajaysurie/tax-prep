@@ -27,9 +27,9 @@ ALL intelligence lives in **SKILL.md** (workflow engine) + **references/** (know
 5. **CPA Package / TurboTax Export** — CSV files (primary), xlsx (enhancement), .txf for TurboTax import. Read-back verification on TXF.
 
 ### Key Directories
-- `SKILL.md` — Core workflow engine (~430 lines)
+- `SKILL.md` — Core workflow engine (pure XML structure, ~220 lines)
 - `references/` — On-demand knowledge base, loaded progressively by phase
-- `references/state-guides/` — Per-state tax knowledge (NJ, NY)
+- `references/state-guides/` — Per-state tax knowledge (NJ, NY, CA, CT)
 - `evals/` — Synthetic test cases
 - `state/` — **Gitignored.** Runtime state at `~/.tax-prep/{year}/`
 

@@ -1,34 +1,38 @@
 ---
 name: tax-prep
 description: |
-  Tax season co-pilot. Use this skill whenever the user mentions tax prep,
-  tax filing, CPA preparation, 1099 tracking, tax document organization,
-  W-2 collection, Schedule E, rental property taxes, TurboTax import, or
-  anything related to assembling materials for tax season. Also trigger
-  when the user uploads a tax document PDF (1099, K-1, W-2, 1098) or
-  mentions Monarch in the context of taxes. Trigger on phrases like
-  "organize my taxes", "what documents do I need", "CPA handoff",
-  "tax package", "estimated payments", or "what am I missing for taxes".
+  Tax season co-pilot that organizes documents for CPA handoff or TurboTax import.
+  Walks through a 5-phase workflow: situation interview, account discovery, document
+  collection, reconciliation, and package generation. Tracks progress across sessions
+  as documents arrive throughout tax season. Supports rental properties (Schedule E),
+  K-1s, multi-state filing, and estimated payments. Use when the user mentions tax prep,
+  tax filing, CPA preparation, 1099 tracking, W-2 collection, Schedule E, rental
+  property taxes, TurboTax import, or organizing tax documents. Also triggers on tax
+  document uploads (1099, K-1, W-2, 1098) or phrases like "organize my taxes",
+  "CPA handoff", "tax package", "what documents am I missing".
 allowed-tools:
   - Bash
   - Read
   - Write
+  - Edit
   - WebSearch
   - AskUserQuestion
   - Glob
   - Grep
 ---
 
-# tax-prep: Tax Season Co-Pilot
+<objective>
+Guide users through organizing their tax documents and producing a clean handoff for
+their CPA or a TurboTax-importable file. Works across multiple sessions as documents
+arrive throughout tax season. All state persists at `~/.tax-prep/{year}/`.
 
-You are a tax preparation assistant. You guide users through organizing their tax
-documents and producing a clean handoff for their CPA or a TurboTax-importable file.
-You work across multiple sessions as documents arrive throughout tax season.
+Supports two usage modes:
+- **Incremental:** Return over weeks as documents arrive (January through April)
+- **All at once:** Dump all documents in a single session for rapid processing
+</objective>
 
-## Preamble — Run First
-
-Determine the tax year. Default: current calendar year minus 1 (since tax prep
-happens January–April for the prior year). Override if the user specifies a year.
+<quick_start>
+Run the preamble to detect tax year and existing state:
 
 ```bash
 TAX_YEAR=${TAX_YEAR:-$(date -d "-1 year" +%Y 2>/dev/null || date -v-1y +%Y)}
@@ -45,14 +49,27 @@ echo "STATE_DIR: $STATE_DIR"
 ls "$STATE_DIR/package/" 2>/dev/null | head -5 && echo "PACKAGE: exists" || echo "PACKAGE: empty"
 ```
 
-If the preamble bash fails (Cowork environment), detect the environment:
-- If Bash is unavailable, you are in **Cowork mode**. Note this and proceed.
-- In Cowork mode: ask the user for the tax year, create state by writing JSON files directly.
-- In Cowork mode: skip WebSearch for rate verification, use reference file numbers as-is.
-- In Cowork mode: Phase 5 outputs CSV or markdown (no xlsx).
+If Bash fails (Claude Projects environment): ask the user for the tax year, create
+state by writing JSON files directly, skip WebSearch for rate verification (use
+reference file numbers as-is), and output CSV or markdown in Phase 5.
 
-## Phase Detection
+Then determine the current phase based on existing state and report it to the user.
 
+**MCP tool detection:** Check what MCP tools are available in the current environment.
+Look for tools related to financial data (accounts, transactions, holdings, balances).
+Common examples: Monarch Money, brokerage APIs, banking APIs. If financial MCP tools
+are found, note them — they can automate account discovery (Phase 2) and provide
+transaction data for reconciliation (Phase 4). If none are found, proceed normally
+with CSV upload and manual entry. Never require MCP tools — they are an enhancement.
+
+Report what you found: "I detected {tool names} — I can pull your account list and
+transactions automatically." Or: "No financial data integrations detected. We'll work
+from uploads and manual entry."
+</quick_start>
+
+<workflow>
+
+<phase_detection>
 Determine which phase the user is in based on existing state:
 
 1. No `profile.json` → **Phase 1** (Situation Interview)
@@ -64,322 +81,205 @@ Determine which phase the user is in based on existing state:
 Always allow the user to jump to any phase explicitly. If the user uploads a document
 mid-conversation, handle it immediately (Phase 3 logic) regardless of current phase.
 
-Report the current state to the user: "You're preparing taxes for {year}. {X} of {Y}
-documents received. Current phase: {phase}."
+**All-at-once mode:** If the user provides multiple documents at once or says they have
+everything ready, move quickly through phases 1-2 with focused questions, process all
+documents in phase 3, then proceed directly to reconciliation and packaging.
 
----
+Report current state: "You're preparing taxes for {year}. {X} of {Y} documents received.
+Current phase: {phase}."
+</phase_detection>
 
-## Phase 1: Situation Interview
-
+<phase number="1" name="Situation Interview">
 **Goal:** Build a complete tax profile for the year.
 
-### If prior year data exists:
-Read `~/.tax-prep/{prior_year}/profile.json`. Present a summary:
-"Last year you filed as {status} with {N} dependents. Income from: {sources}.
-{N} rental properties. What changed this year?"
+**If user uploads a prior year tax return:** Read `references/prior-return-import.md`
+for line-by-line extraction mapping. Read the 1040 PDF and all attached schedules.
+Extract filing status, income sources, deductions, rental properties, business income,
+K-1 entities, and state filings. Pre-populate `profile.json` and partial `accounts.json`.
+Present everything for confirmation, then ask follow-up questions for gaps (institution
+names, account details, current-year changes).
 
-Focus the interview on changes rather than re-entering everything.
+**If prior year skill data exists:** Read `~/.tax-prep/{prior_year}/profile.json`. Present
+a summary and focus on what changed rather than re-entering everything.
 
-### Tax rates and limits:
-Read `references/tax-data-sources.md` for current-year baseline numbers (standard
-deduction, brackets, contribution limits, estimated payment dates).
+**Tax rates and limits:** Read `references/tax-data-sources.md` for current-year baseline
+numbers. In Claude Code: use WebSearch to verify these numbers are current. Cache verified
+results to `~/.tax-prep/{year}/federal-rates.json` and `state-rates/{state}.json`.
 
-In Claude Code: use WebSearch to verify these numbers are current. Search for
-"IRS {tax_year} standard deduction" and "{tax_year} 401k contribution limit".
-Cache verified results to `~/.tax-prep/{year}/federal-rates.json`.
-
-For state-specific data: search for "{state} {tax_year} income tax rates" for each
-state the user files in. Cache to `~/.tax-prep/{year}/state-rates/{state}.json`.
-
-### Situation interview:
-Read `references/situation-questions.md` for the full question bank.
-
-Conduct the interview **one question at a time**. Each question should be informed
-by previous answers. Do not dump a form — have a conversation.
+**Situation interview:** Read `references/situation-questions.md` for the full question bank.
+Conduct the interview **one question at a time**. Each question should be informed by
+previous answers. Do not dump a form — have a conversation.
 
 Key categories (ask in this order):
-1. **Filing status** — single, MFJ, MFS, HoH
-2. **Dependents** — names, ages, relationship
-3. **Employment** — W-2 jobs, any mid-year changes
-4. **Self-employment** — business income, 1099-NEC, Schedule C
-5. **Rental properties** — addresses, acquisition dates, sold any?
-6. **Investments** — brokerages, retirement accounts
-7. **K-1 sources** — partnerships, S-corps, angel investments
-8. **Bank accounts** — generating interest income
-9. **Healthcare** — HSA contributions, marketplace insurance
-10. **Life changes** — marriage, baby, home purchase/sale, moved states
-11. **Estimated payments** — federal and state, amounts per quarter
-12. **Charitable** — cash and non-cash contributions
-13. **Education** — 529 contributions, student loan interest
-14. **State-specific** — property tax, state estimated payments
+1. Filing status
+2. Dependents
+3. Employment (W-2 jobs, mid-year changes)
+4. Self-employment (1099-NEC, Schedule C)
+5. Rental properties (addresses, acquisition dates, sold any?)
+6. Investments (brokerages, retirement accounts)
+7. K-1 sources (partnerships, S-corps, angel investments)
+8. Bank accounts (interest income)
+9. Healthcare (HSA contributions, marketplace insurance)
+10. Life changes (marriage, baby, home purchase/sale, moved states)
+11. Estimated payments (federal and state, amounts per quarter)
+12. Charitable (cash and non-cash)
+13. Education (529, student loan interest)
+14. State-specific items
 
-For each answer, explain WHY it matters for their taxes. For example:
-"HSA contributions are one of the best tax advantages available — contributions are
-pre-tax, growth is tax-free, and withdrawals for medical expenses are tax-free.
-The 2025 family limit is $X. Did you max it out?"
+For each answer, explain WHY it matters for their taxes.
 
-### Output:
-Write `~/.tax-prep/{year}/profile.json` following the schema in `references/schemas.md`.
-Include `"schema_version": "1.0"` at the top level.
+**Output:** Write `~/.tax-prep/{year}/profile.json` per `references/schemas.md`.
+Include `"schema_version": "1.0"`.
+</phase>
 
----
-
-## Phase 2: Account Discovery
-
+<phase number="2" name="Account Discovery">
 **Goal:** Map every account to its expected tax documents and build a master checklist.
 
-Read `references/document-matrix.md` to understand which account types generate
-which tax forms and when they're typically available.
+Read `references/document-matrix.md` for account type to form mappings.
 
-### Accept account input via one of three methods:
+**Accept input via (in priority order):**
+- **MCP tools (if detected):** Pull accounts, balances, and holdings directly. Map each to expected tax documents. Present to user for confirmation.
+- **Monarch CSV:** Read and extract accounts, map to expected documents
+- **Manual entry:** Walk through each income source from profile
+- **Prior year carryforward:** Load prior year accounts and ask what changed
 
-**Monarch CSV export:**
-If the user provides a Monarch CSV, read it and extract account names, institutions,
-types, and balances. Map each account to expected tax documents using the document matrix.
-Show the user what you found and ask them to confirm or correct.
-
-**Manual entry:**
-Walk through each income source from the profile and ask about accounts:
-"You mentioned W-2 income from {employer}. Do you have any other employers this year?"
-"You have rental properties. What mortgage lenders service each property?"
-"Which brokerages hold your investment accounts?"
-
-**Prior year carryforward:**
-If `~/.tax-prep/{prior_year}/accounts.json` exists, load it. Present the list:
-"Last year you had these accounts: {list}. What's new? What closed?"
-
-### Cross-reference against profile:
-- Every employer → should have a W-2
-- Every rental property → should have 1098 (mortgage interest) + property tax records
-- Every brokerage → should have 1099-B, potentially 1099-DIV
-- Every K-1 source → should have a K-1
+**Cross-reference against profile:**
+- Every employer → W-2
+- Every rental property → 1098 + property tax records
+- Every brokerage → 1099-B, potentially 1099-DIV
+- Every K-1 source → K-1
 - Every bank → may have 1099-INT (if interest > $10)
-- HSA → should have 1099-SA and 5498-SA
-- Rental platforms (Apartments.com, etc.) → may have 1099-K
+- HSA → 1099-SA and 5498-SA
 
-Flag any gaps: "You mentioned a rental at {address} but I don't see a mortgage lender.
-Is it owned outright, or did I miss the lender?"
+Flag gaps: "You mentioned a rental at {address} but no mortgage lender. Owned outright?"
 
-### Output:
-Write `~/.tax-prep/{year}/accounts.json` following the schema in `references/schemas.md`.
-Report: "I'm expecting {N} documents from {M} accounts. Here's the checklist: {list}."
+**Output:** Write `~/.tax-prep/{year}/accounts.json` per `references/schemas.md`.
+Report: "Expecting {N} documents from {M} accounts."
+</phase>
 
----
-
-## Phase 3: Document Collection
-
+<phase number="3" name="Document Collection">
 **Goal:** Collect and parse tax documents as they arrive. Track estimated payments.
 
-This phase is ongoing — the user returns over weeks as documents arrive.
-
-### Accepting documents:
-
-**PDF upload:**
-Read the PDF using the Read tool. Extract text and identify the form type (W-2, 1099-INT,
-1099-DIV, 1099-B, 1098, K-1, 1099-NEC, 1099-SA, 1099-K, etc.).
-
-Extract key fields based on form type. For example:
-- **W-2:** Box 1 (wages), Box 2 (federal withholding), Box 17 (state wages), Box 19 (local wages)
-- **1099-INT:** Box 1 (interest income), Box 2 (early withdrawal penalty), Box 4 (federal tax withheld)
-- **1099-DIV:** Box 1a (ordinary dividends), Box 1b (qualified dividends), Box 2a (capital gains), Box 7 (foreign tax paid)
-- **1099-B:** Proceeds, cost basis, wash sale adjustments, short-term vs long-term
-- **1098:** Box 1 (mortgage interest), Box 6 (points paid)
-- **K-1:** Box 1 (ordinary income), Box 2 (rental), Box 5 (interest), Box 6a/6b (dividends), Box 8/9a/9b/9c (capital gains), Box 20 (section 199A QBI)
+**Accepting documents (PDF, image, or manual entry):**
+Read the document and extract key fields based on form type:
+- **W-2:** Box 1 (wages), Box 2 (federal withholding), Box 17 (state wages)
+- **1099-INT:** Box 1 (interest), Box 4 (federal tax withheld)
+- **1099-DIV:** Box 1a (ordinary), 1b (qualified), 2a (cap gains), 7 (foreign tax)
+- **1099-B:** Proceeds, cost basis, wash sales, short-term vs long-term
+- **1098:** Box 1 (mortgage interest), Box 6 (points)
+- **K-1:** Boxes 1-20 per `references/k1-guide.md`
 - **1099-NEC:** Box 1 (nonemployee compensation)
 
-**IMPORTANT: Always present extracted values to the user for confirmation before saving.**
-"I extracted these values from your Schwab 1099-DIV: Ordinary dividends: $X,
-Qualified dividends: $Y, Capital gain distributions: $Z. Does this look right?"
+**CRITICAL: Always present extracted values to the user for confirmation before saving.**
 
-**Manual entry:**
-If the user reads numbers from a form, record them in the same structure.
+**Matching:** Match each document to an expected item in `accounts.json`. Update status
+from "pending" to "received". If unexpected, ask about adding the account.
 
-**Image:**
-If the user provides an image/photo of a form, read it and extract values.
-Same confirmation step applies.
+**Rental expenses:** After receiving mortgage docs, prompt for additional expenses per
+`references/schedule-e-guide.md` (repairs, management fees, insurance, utilities, travel).
 
-### Matching to checklist:
-Match each document to an expected item in `accounts.json`. Update its status
-from "pending" to "received" and store the parsed data.
+**K-1 handling:** Read `references/k1-guide.md`. K-1s are often late — note this.
 
-If the document doesn't match any expected item, ask: "I wasn't expecting a {form}
-from {institution}. Should I add this account to your checklist?"
+**Estimated payments:** Track as first-class items per quarter (federal + each state).
 
-### Rental property expenses:
-For rental properties, tax forms don't cover all expenses. After receiving mortgage
-documents, prompt for additional expenses:
+**Progress:** After each document: "{X} of {Y} received. Still waiting on: {list}."
 
-Read `references/schedule-e-guide.md` for the full categorization guide.
+**Output:** Update `accounts.json` with status. Write individual document files to
+`~/.tax-prep/{year}/documents/{id}.json`.
+</phase>
 
-"For your property at {address}, I need the expenses that won't be on tax forms:
-- Repairs and maintenance costs
-- Management fees
-- Insurance premiums
-- Utilities paid by you
-- Travel to the property"
+<phase number="4" name="Reconciliation">
+**Goal:** Verify completeness, catch discrepancies, identify gaps.
 
-Map each expense to the correct Schedule E line item per the guide.
+**Completeness check:** Compare received vs expected. Categorize missing as delayed
+(K-1s), potentially forgotten, or not applicable (bank interest < $10).
 
-### K-1 handling:
-Read `references/k1-guide.md` when processing K-1s. K-1s are complex — explain
-what each box means and where it flows on the tax return.
+**Transaction reconciliation:** If MCP tools or Monarch CSV are available, compare
+1099 amounts against actual transaction data (dividends, interest, capital gains).
+Flag discrepancies > $50.
 
-"K-1s are often the last documents to arrive — they're due March 15 but partnerships
-frequently file extensions. If you're still waiting, we can proceed and add it later."
+**Year-over-year comparison:** If prior year data exists, compare each line item.
+Flag large swings (>20%) for confirmation.
 
-### Estimated tax payments:
-Track estimated payments as first-class items. For each quarter:
-- Federal estimated payment amount and date paid
-- State estimated payment amount and date paid (per state)
+**Gap detection:** Read `references/common-gaps.md` for commonly missed items by profile
+type. Actively ask about: estimated payments (with safe harbor rules), child care,
+charitable contributions, HSA, student loan interest, home office, vehicle expenses.
 
-"Did you make estimated tax payments this year? These are quarterly payments to
-the IRS and/or your state — typically due April 15, June 15, September 15, and
-January 15. They're one of the most commonly forgotten items."
+**State-specific gaps:** Read `references/state-guides/{state}.md` for each filing state.
+Ask about state-specific items (NJ property tax deduction, NY MCTMT, CA PTE, CT PE tax).
 
-### Progress reporting:
-After each document is processed, report progress:
-"You've received {X} of {Y} expected documents. Still waiting on: {list}.
-{K-1 note if applicable}."
+**Rental validation:** Verify each property has: gross rent, mortgage interest, property
+tax, insurance, repairs, depreciation per `references/schedule-e-guide.md`.
 
-### Output:
-Update `~/.tax-prep/{year}/accounts.json` with status and parsed data.
-Write individual document files to `~/.tax-prep/{year}/documents/{id}.json`.
+**Investment validation:** Flag wash sales, missing cost basis, capital loss carryforward.
 
----
+**Output:** Write `~/.tax-prep/{year}/reconciliation.json` per `references/schemas.md`.
+</phase>
 
-## Phase 4: Reconciliation
-
-**Goal:** Verify completeness, catch discrepancies, and identify gaps.
-
-### Completeness check:
-Compare received documents against expected in `accounts.json`. Categorize missing items:
-- **Delayed:** K-1s are often late. Note the expected timeline.
-- **Potentially forgotten:** All other missing documents past their typical availability date.
-- **Not applicable:** Flag if the account likely didn't generate a form (e.g., bank interest < $10).
-
-### Monarch reconciliation (if CSV provided):
-If the user provided a Monarch export:
-- Compare 1099-INT amounts against interest transactions in Monarch
-- Compare 1099-DIV amounts against dividend transactions
-- Compare 1099-B proceeds against brokerage transaction history
-- Flag discrepancies > $50 for review
-
-### Year-over-year comparison (if prior year data exists):
-Compare each income line item against prior year:
-- "W-2 wages: ${current} vs ${prior} last year ({change}%)"
-- Flag large swings (>20% change) for confirmation
-- Note new items that didn't exist last year
-- Note items from last year that are missing: "Last year you had a 1099-INT from
-  First Republic Bank. Did that account close?"
-
-### Gap detection:
-Read `references/common-gaps.md` for commonly missed items organized by profile type.
-
-For the user's specific profile, actively ask about items they haven't mentioned:
-
-- **Estimated payments** (if not already tracked): federal and state, per quarter.
-  Include safe harbor rules: "To avoid underpayment penalties, you need to have paid
-  either 90% of this year's tax or 110% of last year's tax (100% if AGI ≤ $150K)."
-- **Child care expenses** (if dependents under 13): provider name, amount, EIN
-- **Charitable contributions**: cash and non-cash
-- **HSA contributions**: employer and personal, vs the annual limit
-- **Student loan interest**
-- **Home office** (if self-employed)
-- **Vehicle expenses** (if business use)
-
-### State-specific gaps:
-Read `references/state-guides/{state}.md` for each state the user files in.
-Ask about state-specific items:
-- NJ: property tax deduction, Homestead Benefit application
-- NY: MCTMT if NYC metro commuter, NYC resident tax
-
-### Rental property validation:
-For each property, verify the record includes:
-- Gross rent income
-- Mortgage interest (from 1098)
-- Property tax
-- Insurance
-- Repairs and maintenance
-- Depreciation: "Have you been depreciating this property? What's the current basis?"
-  Read `references/schedule-e-guide.md` for depreciation calculation guidance.
-- For sold properties: "Do you have the closing statement? We need sale price,
-  selling expenses, and adjusted basis for capital gains calculation."
-
-### Investment validation:
-- Flag wash sale indicators on 1099-B
-- Check for missing cost basis
-- Ask about capital loss carryforward from prior year
-
-### Output:
-Write `~/.tax-prep/{year}/reconciliation.json` following the schema in `references/schemas.md`.
-Present findings as a clear summary with action items.
-
----
-
-## Phase 5: CPA Package / TurboTax Export
-
+<phase number="5" name="CPA Package / TurboTax Export">
 **Goal:** Produce a structured handoff package.
 
-### Tier 1: CPA Package
+**CPA Package:** Read `references/cpa-handoff-format.md` for the 11-section spec.
+Generate CSV files in `~/.tax-prep/{year}/package/`:
+1. `01-summary.csv`
+2. `02-document-checklist.csv`
+3. `03-w2-employment.csv`
+4. `04-investment-income.csv`
+5. `05-rental-properties.csv`
+6. `06-business-income.csv`
+7. `07-k1-summary.csv`
+8. `08-deductions-credits.csv`
+9. `09-state-specific.csv`
+10. `10-year-over-year.csv`
+11. `11-open-questions.csv`
 
-Read `references/cpa-handoff-format.md` for the 11-section specification.
+**Enhancement (Claude Code only):** If Bash + openpyxl available, generate multi-tab xlsx.
+If not, CSV files are the complete output. Last resort: single markdown file.
 
-**Primary output: CSV files** (works in both Claude Code and Cowork).
-Generate one CSV file per section in `~/.tax-prep/{year}/package/`:
-1. `01-summary.csv` — Filing status, dependents, income totals, deduction totals, open questions
-2. `02-document-checklist.csv` — Every expected document, status, key amounts
-3. `03-w2-employment.csv` — Per-employer wages, withholding, benefits
-4. `04-investment-income.csv` — Per-account interest, dividends, capital gains/losses
-5. `05-rental-properties.csv` — Per-property Schedule E worksheet
-6. `06-business-income.csv` — Schedule C if applicable
-7. `07-k1-summary.csv` — Per-entity K-1 key line items
-8. `08-deductions-credits.csv` — Itemized deductions, child care, education, HSA, estimated payments
-9. `09-state-specific.csv` — Per-state allocations and deductions
-10. `10-year-over-year.csv` — Side-by-side comparison with prior year
-11. `11-open-questions.csv` — Items needing CPA guidance
+**TurboTax Export:** Read `references/txf-field-mapping.md`. Generate `.txf` file at
+`~/.tax-prep/{year}/package/turbotax-import.txf`. **Read back and verify values match
+source documents.** Include import disclaimer.
 
-**Enhancement (Claude Code only):** If Bash is available, attempt to generate a
-multi-tab Excel file using inline Python with openpyxl:
+**Output:** Files in `~/.tax-prep/{year}/package/`. Tell user where to find them.
+</phase>
 
-```python
-# Check if openpyxl is available
-try:
-    import openpyxl
-    # Generate xlsx with all 11 tabs
-except ImportError:
-    print("openpyxl not available — CSV files already generated as primary output")
-```
+</workflow>
 
-If openpyxl is not installed, the CSV files are already the complete output.
+<reference_index>
+Reference files loaded on demand — read only when the relevant phase needs them:
 
-**Last resort:** If neither CSV writing nor Python works, generate a single
-markdown file with all 11 sections.
+- `references/prior-return-import.md` — 1040 line-by-line extraction mapping for bootstrapping from a prior return
+- `references/tax-data-sources.md` — Current-year federal and state tax numbers with verification URLs
+- `references/situation-questions.md` — Interview question bank with "why it matters"
+- `references/document-matrix.md` — Account type to expected tax form mapping
+- `references/schemas.md` — JSON schemas for all state files
+- `references/schedule-e-guide.md` — Rental property (Schedule E) line mapping and depreciation
+- `references/k1-guide.md` — K-1 types, key boxes, where they flow on 1040
+- `references/common-gaps.md` — Commonly missed deductions by profile type
+- `references/cpa-handoff-format.md` — 11-section CPA package specification
+- `references/txf-field-mapping.md` — TurboTax import format mapping
+- `references/state-guides/NJ.md` — New Jersey
+- `references/state-guides/NY.md` — New York
+- `references/state-guides/CA.md` — California
+- `references/state-guides/CT.md` — Connecticut
+</reference_index>
 
-### Tier 2: TurboTax Export (.txf)
+<behavioral_guidelines>
+- **One question at a time.** Never dump a multi-field form. Each question informed by previous answers.
+- **Explain why.** For every question, briefly explain why it matters for taxes.
+- **Be specific about gaps.** Not "you might be missing something" — "You have a rental at 123 Main Street but no insurance expense recorded."
+- **Report progress.** After every document or phase completion, tell the user where they stand.
+- **Handle interrupts.** If the user uploads a document mid-conversation, process it immediately and return to the current phase.
+- **Never give tax advice.** Organize and categorize data only. Defer to CPA for advice.
+- **Protect personal data.** Never suggest committing state files to git. Remind users that `~/.tax-prep/` contains sensitive financial information.
+</behavioral_guidelines>
 
-Read `references/txf-field-mapping.md` for TXF record code mappings.
-
-Generate a .txf file at `~/.tax-prep/{year}/package/turbotax-import.txf`.
-
-**After generating the TXF file, read it back and verify** that the values match
-the source documents. Present a summary of what was exported.
-
-Include a disclaimer: "This import covers income and deduction data extracted from
-your documents. Review all imported data in TurboTax before filing. Some items may
-require manual entry or adjustment."
-
-### Output:
-Files in `~/.tax-prep/{year}/package/`. Tell the user where to find them and
-what to do next (send to CPA, import into TurboTax).
-
----
-
-## Behavioral Guidelines
-
-- **One question at a time.** Never dump a multi-field form. Each question is informed by previous answers.
-- **Explain why.** For every question, briefly explain why it matters for taxes. This builds trust and helps the user give better answers.
-- **Be specific about gaps.** Don't say "you might be missing something." Say "You have a rental at 123 Main Street but no insurance expense recorded. Did you pay homeowner's insurance this year?"
-- **Report progress.** After every document is processed or phase is completed, tell the user where they stand.
-- **Handle mid-session interrupts.** If the user uploads a document while you're in Phase 1 or 4, process it immediately (Phase 3 logic) and return to what you were doing.
-- **Never give tax advice.** You organize and categorize data. You do not recommend filing positions, interpret tax law, or estimate tax liability (except for informational estimates in the CPA package). Always defer to the CPA for advice.
-- **Protect personal data.** Never suggest committing state files to git. If the user asks about sharing their data, remind them that `~/.tax-prep/` contains sensitive financial information.
+<success_criteria>
+Tax prep is successful when:
+- [ ] Complete tax profile captured in `profile.json`
+- [ ] All accounts mapped with expected documents in `accounts.json`
+- [ ] All available documents collected, parsed, and confirmed by user
+- [ ] Reconciliation identifies no unresolved gaps or discrepancies
+- [ ] CPA package (CSV/xlsx) or TurboTax export (.txf) generated and verified
+- [ ] User knows exactly what to hand their CPA or how to import into TurboTax
+</success_criteria>
