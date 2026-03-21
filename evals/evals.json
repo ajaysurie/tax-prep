@@ -1,0 +1,37 @@
+[
+  {
+    "id": "new-complex-user",
+    "description": "New user with complex tax profile — first time using the skill",
+    "phase": "1-2",
+    "user_message": "I need to start my 2025 tax prep. I'm married filing jointly, we have two kids (ages 4 and 7), I have a W-2 from Acme Corp and 1099-NEC income from my consulting business, three rental properties in NJ and NY, brokerage accounts at two major firms, and K-1s from two angel investments. I use Monarch to track everything. Help me get organized for my CPA.",
+    "expected_behavior": "Skill should: (1) create ~/.tax-prep/2025/ directory, (2) conduct situation interview one question at a time, building on provided info, (3) pull current-year IRS rates, (4) create profile.json, (5) transition to Phase 2 and map accounts to expected documents using document-matrix, (6) generate accounts.json with ~20+ expected documents"
+  },
+  {
+    "id": "returning-user-yoy",
+    "description": "Returning user with prior year data — property sold",
+    "phase": "1",
+    "user_message": "Let's do tax prep for 2025. I did this last year too. One change: I sold one of my rental properties this year.",
+    "expected_behavior": "Skill should: (1) load prior year profile.json, (2) present summary of last year's situation, (3) ask 'what changed' rather than re-interviewing from scratch, (4) handle the sold property — ask for closing statement details, (5) reference schedule-e-guide.md for sale/depreciation recapture, (6) update profile with property disposition"
+  },
+  {
+    "id": "document-upload-mid-flow",
+    "description": "User uploads a PDF document during an active session",
+    "phase": "3",
+    "user_message": "I just got my 1099-DIV from First National Brokerage. Here it is.",
+    "expected_behavior": "Skill should: (1) read the PDF, (2) identify it as 1099-DIV, (3) extract key fields (ordinary dividends, qualified dividends, capital gains distributions, foreign tax paid), (4) present extracted values to user for confirmation, (5) match to expected document in accounts.json, (6) update status to received, (7) report overall progress"
+  },
+  {
+    "id": "self-filer-turbotax",
+    "description": "Self-filer wanting TurboTax export instead of CPA package",
+    "phase": "5",
+    "user_message": "I don't use a CPA. Can you help me organize my tax docs and export them so I can import into TurboTax?",
+    "expected_behavior": "Skill should: (1) proceed through normal workflow, (2) in Phase 5 generate TXF file using txf-field-mapping.md, (3) read back the TXF file and verify values, (4) provide import instructions for TurboTax, (5) include disclaimer about reviewing imported data, (6) note limitations of TXF format"
+  },
+  {
+    "id": "reconciliation-with-monarch",
+    "description": "User has uploaded all docs and provides Monarch CSV for reconciliation",
+    "phase": "4",
+    "user_message": "I've uploaded all my docs. Here's my Monarch export too. Can you check everything matches?",
+    "expected_behavior": "Skill should: (1) read Monarch CSV, (2) compare interest income in 1099-INTs against Monarch interest transactions, (3) compare dividend income against Monarch dividends, (4) flag discrepancies > $50, (5) run completeness check against accounts.json, (6) load common-gaps.md and ask about commonly missed items for user's profile, (7) generate reconciliation.json"
+  }
+]

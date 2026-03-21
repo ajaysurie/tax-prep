@@ -1,0 +1,33 @@
+# Runtime state (personal tax data — never commit)
+state/
+!state/.gitkeep
+
+# User tax data directory
+.tax-prep/
+
+# Generated outputs
+*.xlsx
+*.txf
+
+# Uploaded documents
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
