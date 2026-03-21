@@ -133,6 +133,8 @@ tax-prep/
 ├── SKILL.md                          # Core workflow (this is the brain)
 ├── CLAUDE.md                         # Project config for Claude Code
 ├── README.md                         # You are here
+├── VERSION                           # Current version (e.g., 2025.1)
+├── CHANGELOG.md                      # What changed in each version
 │
 ├── references/
 │   ├── tax-data-sources.md           # 2025 federal numbers + authoritative source URLs
@@ -173,9 +175,8 @@ cd ~/.claude/skills/tax-prep
 git pull
 ```
 
-Tax rates and state guides are updated annually. Check `references/tax-data-sources.md`
-for the "Last Verified" date to see when numbers were last confirmed against official
-sources.
+Check `VERSION` for the current version and `CHANGELOG.md` for what changed.
+Tax data is updated annually and after major legislation (tagged as `2025.1`, `2025.2`, etc.).
 
 ### Keeping Tax Data Current
 
