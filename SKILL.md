@@ -47,7 +47,21 @@ echo "STATE_DIR: $STATE_DIR"
 [ -f "$STATE_DIR/accounts.json" ] && echo "ACCOUNTS: exists" || echo "ACCOUNTS: missing"
 [ -f "$STATE_DIR/reconciliation.json" ] && echo "RECONCILIATION: exists" || echo "RECONCILIATION: missing"
 ls "$STATE_DIR/package/" 2>/dev/null | head -5 && echo "PACKAGE: exists" || echo "PACKAGE: empty"
+
+# Check for updates
+SKILL_DIR="${SKILL_DIR:-$HOME/.claude/skills/tax-prep}"
+LOCAL_VER=$(cat "$SKILL_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || echo "")
+REMOTE_VER=$(curl -sf --max-time 5 "https://raw.githubusercontent.com/ajaysurie/tax-prep/main/VERSION" 2>/dev/null | tr -d '[:space:]' || echo "")
+if [ -n "$LOCAL_VER" ] && [ -n "$REMOTE_VER" ] && [ "$LOCAL_VER" != "$REMOTE_VER" ]; then
+  echo "UPDATE_AVAILABLE: $LOCAL_VER -> $REMOTE_VER (run: cd $SKILL_DIR && git pull)"
+else
+  echo "VERSION: ${LOCAL_VER:-unknown}"
+fi
 ```
+
+If the preamble prints `UPDATE_AVAILABLE`, tell the user: "A newer version of tax-prep
+is available ({old} → {new}). Run `cd {path} && git pull` to update. Continuing with
+the current version."
 
 If Bash fails (Claude Projects environment): ask the user for the tax year, create
 state by writing JSON files directly, skip WebSearch for rate verification (use
