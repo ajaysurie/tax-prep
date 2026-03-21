@@ -1,66 +1,161 @@
 # tax-prep
 
-A Claude skill that acts as your tax season co-pilot. It walks you through the entire process of preparing materials for a CPA or self-filing via TurboTax: profiling your tax situation, discovering what documents you need, tracking what's arrived, reconciling everything, and producing a clean handoff package.
+A Claude Code skill that acts as your tax season co-pilot. It walks you through
+organizing everything your CPA needs — or exports a TurboTax-importable file if
+you self-file.
 
 Works across multiple sessions as documents trickle in throughout tax season.
+Your progress is saved between sessions in `~/.tax-prep/{year}/`.
 
 ## Who It's For
 
 Anyone with financial complexity beyond a single W-2:
 
-- Rental property owners
-- People with brokerage/investment accounts (1099-B, 1099-DIV, 1099-INT)
+- Rental property owners (Schedule E)
+- Brokerage/investment accounts (1099-B, 1099-DIV, 1099-INT)
 - Side business income (1099-NEC, Schedule C)
 - K-1s from partnerships, S-corps, or angel investments
 - Multi-state filers (NJ, NY, CA, CT guides included — more states welcome)
 - People who use a CPA and want to hand off a clean, organized package
 - Self-filers who use TurboTax and want to skip manual data entry
 
-## Setup
+## Quick Start
 
-### Claude Code
+### Option A: Claude Code (CLI)
 
-```bash
-git clone https://github.com/ajaysurie/tax-prep.git
-```
-
-Then reference the skill from your project or add it to your skills directory:
+**Install:**
 
 ```bash
-# Option 1: Copy to your skills directory
-cp -r tax-prep ~/.claude/skills/tax-prep
-
-# Option 2: Reference directly
-# Just invoke from the cloned directory
+git clone https://github.com/ajaysurie/tax-prep.git ~/.claude/skills/tax-prep
 ```
 
-Start a conversation and say:
+That's it. The skill is now available in Claude Code.
 
-> "Let's start tax prep for 2025"
+**Use it:**
 
-or invoke directly with `/tax-prep`.
+Open Claude Code and say any of these:
 
-### Claude Cowork (claude.ai Projects)
+```
+Let's start tax prep for 2025
+I need to organize my taxes
+Help me get ready for my CPA
+I just got my 1099-DIV from Fidelity — here it is
+What documents am I still missing?
+```
 
-1. Create a new project in claude.ai
-2. Upload all files from this repo to the project (drag and drop the folder, or upload individually)
-3. Start a conversation and say:
+Claude will detect the skill automatically and walk you through the workflow.
 
-> "Let's start tax prep for 2025"
+### Option B: Claude Projects (claude.ai)
 
-The skill works fully in Cowork — it reads PDFs, parses CSVs, and tracks your progress across conversations. The only difference is that the CPA package outputs as CSV files instead of a multi-tab Excel file.
+1. Go to [claude.ai](https://claude.ai) and create a new Project
+2. In the project knowledge, upload these files from this repo:
+   - `SKILL.md` (the core workflow — **this is the most important file**)
+   - The entire `references/` folder (tax rates, document guides, schemas)
+3. Start a conversation:
 
-## How It Works
+```
+Let's start tax prep for 2025
+```
 
-The skill guides you through five phases:
+Everything works in Projects except: CPA package outputs as CSV (not Excel),
+and tax rate verification uses the reference file numbers directly (no web search).
 
-1. **Situation Interview** — Conversational profiling of your tax situation (filing status, income sources, properties, life changes). Pulls current-year IRS rates and limits.
-2. **Account Discovery** — Maps your accounts to expected tax documents. Accepts a Monarch CSV export, manual entry, or prior-year carryforward.
-3. **Document Collection** — Ongoing across tax season. Upload PDFs or enter numbers manually. The skill extracts key fields, matches them to your checklist, and tracks progress.
-4. **Reconciliation** — Checks for completeness, compares against Monarch data, flags year-over-year anomalies, and catches commonly missed deductions.
-5. **CPA Package / TurboTax Export** — Generates a structured handoff (CSV/Excel) or a TurboTax-importable .txf file.
+### Option C: Just Read It
 
-Your progress is saved between sessions in `~/.tax-prep/{year}/`. Come back in two weeks when another K-1 arrives and pick up where you left off.
+Don't use Claude Code or Projects? The `references/` folder is still useful on its own:
+
+- `references/document-matrix.md` — what documents you need based on your accounts
+- `references/common-gaps.md` — deductions people commonly miss
+- `references/tax-data-sources.md` — current 2025 federal and state tax numbers
+- `references/state-guides/` — state-specific rules for NJ, NY, CA, CT
+- `references/cpa-handoff-format.md` — how to organize your CPA package
+
+## The Workflow
+
+The skill guides you through five phases, one conversation at a time:
+
+```
+Phase 1                Phase 2              Phase 3
+SITUATION     --->     ACCOUNT      --->    DOCUMENT
+INTERVIEW              DISCOVERY            COLLECTION
+                                            (ongoing — upload
+                                             docs as they arrive)
+    |                      |                     |
+    v                      v                     v
+ profile.json         accounts.json         documents/*.json
+
+
+Phase 4                Phase 5
+RECONCILIATION  --->   CPA PACKAGE or
+                       TURBOTAX EXPORT
+    |                      |
+    v                      v
+ reconciliation.json   CSV files + .txf
+```
+
+**Phase 1: Situation Interview** — Claude asks about your filing status, income
+sources, properties, investments, life changes. One question at a time, explains
+why each matters. Pulls current IRS rates and limits. Saves `profile.json`.
+
+**Phase 2: Account Discovery** — You list your financial accounts (or upload a
+Monarch CSV export). Claude maps each account to the tax documents you should
+expect (e.g., Fidelity brokerage → 1099-B, 1099-DIV, 1099-INT). Saves `accounts.json`.
+
+**Phase 3: Document Collection** — The longest phase. As documents arrive (January
+through March), upload the PDF or enter numbers manually. Claude extracts key fields,
+shows you what it found for confirmation, matches it to your checklist, and reports
+progress. "You have 14 of 22 documents. Still waiting on: K-1 from Fund X, 1099-B
+from Schwab..."
+
+**Phase 4: Reconciliation** — Once everything (or almost everything) is in, Claude
+checks: Are the numbers consistent? Does your Monarch data match your 1099s? Did you
+forget estimated tax payments? Are there deductions you're missing based on your
+profile? Flags anything suspicious.
+
+**Phase 5: CPA Package / TurboTax Export** — Generates the final output:
+- **For CPA users:** A set of organized CSV files covering income, deductions,
+  rental properties, K-1s, state-specific items, and open questions
+- **For TurboTax users:** A `.txf` file you can import directly, plus instructions
+
+### Returning Next Year
+
+```
+Let's do tax prep for 2026
+```
+
+Claude loads your 2025 profile and asks "what changed?" instead of re-interviewing
+from scratch. Sold a property? New job? Had a baby? Just tell it the delta.
+
+## What's in This Repo
+
+```
+tax-prep/
+├── SKILL.md                          # Core workflow (this is the brain)
+├── CLAUDE.md                         # Project config for Claude Code
+├── README.md                         # You are here
+│
+├── references/
+│   ├── tax-data-sources.md           # 2025 federal numbers + authoritative source URLs
+│   ├── document-matrix.md            # Account type → expected tax forms
+│   ├── situation-questions.md        # Interview question bank
+│   ├── schemas.md                    # JSON schemas for all state files
+│   ├── schedule-e-guide.md           # Rental property (Schedule E) reference
+│   ├── common-gaps.md                # Commonly missed deductions by profile
+│   ├── k1-guide.md                   # K-1 types, key boxes, where they flow
+│   ├── cpa-handoff-format.md         # CPA package specification
+│   ├── txf-field-mapping.md          # TurboTax import format mapping
+│   └── state-guides/
+│       ├── NJ.md                     # New Jersey
+│       ├── NY.md                     # New York
+│       ├── CA.md                     # California
+│       └── CT.md                     # Connecticut
+│
+├── evals/
+│   └── evals.json                    # 5 synthetic test scenarios
+│
+└── state/                            # Gitignored — runtime only
+    └── .gitkeep
+```
 
 ## Data Privacy
 
@@ -68,40 +163,51 @@ Your progress is saved between sessions in `~/.tax-prep/{year}/`. Come back in t
 
 - Your tax data lives in `~/.tax-prep/{year}/` (created at runtime, never committed)
 - Uploaded PDFs, Monarch exports, and generated packages are never tracked by git
-- The repo contains only generic reference materials, templates, and the skill workflow
-- Test cases use synthetic data
+- The repo contains only generic reference materials and the skill workflow
+- Test cases use entirely synthetic data
 
 ## Updating
 
 ```bash
-cd path/to/tax-prep
+cd ~/.claude/skills/tax-prep
 git pull
 ```
 
-Reference files (tax rates, state guides) are updated annually. The `references/tax-data-sources.md` file contains current-year numbers and an annual update checklist.
+Tax rates and state guides are updated annually. Check `references/tax-data-sources.md`
+for the "Last Verified" date to see when numbers were last confirmed against official
+sources.
 
 ### Keeping Tax Data Current
 
-All tax numbers are sourced from official government publications (IRS.gov, FTB.ca.gov,
-tax.ny.gov, nj.gov/treasury, portal.ct.gov/drs). The authoritative sources index at the
-bottom of `references/tax-data-sources.md` lists every source URL used.
+All numbers are sourced from official government publications. The authoritative sources
+index at the bottom of `references/tax-data-sources.md` lists every URL used:
 
-To update for a new tax year:
+| Jurisdiction | Authority | URL |
+|-------------|-----------|-----|
+| Federal | IRS | https://www.irs.gov/ |
+| New Jersey | Division of Taxation | https://www.nj.gov/treasury/taxation/ |
+| New York | Dept. of Taxation and Finance | https://www.tax.ny.gov/ |
+| California | Franchise Tax Board | https://www.ftb.ca.gov/ |
+| Connecticut | Dept. of Revenue Services | https://portal.ct.gov/drs |
 
-1. Check `references/tax-data-sources.md` — follow the "Annual Update Process" section
-2. Update federal numbers from the IRS Revenue Procedure (published each November)
-3. Update each state guide from the official state tax authority website
-4. Update the federal numbers referenced in each state's comparison table
-5. Update the "Last Verified" date at the bottom of `tax-data-sources.md`
+To update for a new tax year, follow the "Annual Update Process" checklist in
+`references/tax-data-sources.md`.
 
 ## Contributing
 
 The `references/` directory is the knowledge base — contributions welcome:
 
-- **State tax guides** (`references/state-guides/`) — add your state
+- **State tax guides** (`references/state-guides/`) — add your state! Use an existing
+  guide as a template. Cover: brackets, estimated payments, state-specific credits,
+  federal differences table, pass-through entity tax, filing requirements.
 - **Document matrix updates** — new account types or form changes
 - **Common gaps** — deductions people miss in your profession or situation
 - **TXF field mappings** — corrections or additions for tax software import
+
+## Disclaimer
+
+This tool organizes your tax documents and data. It does not provide tax advice.
+Always review output with a qualified tax professional before filing.
 
 ## License
 
