@@ -698,7 +698,7 @@ This file captures every finding from the reconciliation process: completeness g
         "expected_by": "2026-01-31",
         "days_overdue": 38,
         "category": "potentially_forgotten",
-        "suggested_action": "Check National Home Lending online portal or call their customer service number"
+        "suggested_action": "Check lender online portal or call their customer service number"
       },
       {
         "doc_id": "sunrise-k1-2025",
