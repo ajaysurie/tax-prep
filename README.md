@@ -45,23 +45,25 @@ What documents am I still missing?
 
 Claude will detect the skill automatically and walk you through the workflow.
 
-### Option B: Claude Skills Upload (claude.ai)
+### Option B: Cowork
 
-Upload the skill directly to Claude on the web:
-
-1. Download this repo as a ZIP (or `git clone` and zip the `tax-prep/` folder)
-2. Go to [claude.ai](https://claude.ai) → Settings → Skills
-3. Click "Add Skill" and upload the ZIP file
-4. Start a new conversation:
+1. Download this repo as a ZIP from GitHub (green "Code" button → "Download ZIP")
+2. In Claude, go to **Customize → Skills → "+" → "Upload a skill"**
+3. Upload the ZIP file
+4. Start a Cowork task:
 
 ```
 Let's start tax prep for 2025
 ```
 
-The skill and all reference files are loaded automatically. CPA package outputs
-as CSV (not Excel), and tax rate verification uses reference file numbers directly.
+The skill activates automatically. CPA package outputs as markdown and CSV.
 
-### Option C: Claude Projects (claude.ai)
+### Option C: Claude Skills Upload (claude.ai)
+
+Same as Cowork — download the ZIP and upload via **Customize → Skills → "+"**.
+Works in regular Claude conversations too, not just Cowork.
+
+### Option D: Claude Projects (claude.ai)
 
 1. Go to [claude.ai](https://claude.ai) and create a new Project
 2. In the project knowledge, upload these files from this repo:
@@ -73,10 +75,10 @@ as CSV (not Excel), and tax rate verification uses reference file numbers direct
 Let's start tax prep for 2025
 ```
 
-Same capabilities as Skills Upload. Use this if you prefer the Projects interface
-or want to add your own additional context to the project.
+Use this if you prefer the Projects interface or want to add your own additional
+context to the project.
 
-### Option D: Just Read It
+### Option E: Just Read It
 
 Don't use Claude? The `references/` folder is still useful on its own:
 
@@ -175,7 +177,7 @@ tax-prep/
 │       └── CT.md                     # Connecticut
 │
 ├── evals/
-│   └── evals.json                    # 5 synthetic test scenarios
+│   └── evals.json                    # 8 synthetic test scenarios
 │
 └── state/                            # Gitignored — runtime only
     └── .gitkeep
