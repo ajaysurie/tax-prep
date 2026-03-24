@@ -145,11 +145,41 @@ capital improvements with costs and dates, and (4) your accumulated depreciation
 
 ---
 
-## Condo/Co-op Special Rules
+## Property-Type Expense Prompts
 
-- **Common charges / HOA fees:** Deductible on Line 19 (Other) for rental units
-- **Special assessments:** If for repairs (new boiler for the building), deductible. If for improvements (new lobby renovation), added to basis.
-- **Underlying mortgage:** Co-ops have a building-level mortgage. Your share of the interest is deductible on Line 12, and your share of the property tax on Line 16. The co-op should provide a statement annually.
+When collecting rental expenses, tailor questions to the property type.
+
+### Single Family Home
+Standard prompts:
+- Mortgage interest (from 1098)
+- Property tax
+- Insurance (landlord policy)
+- Repairs and maintenance
+- Property management fees
+- Utilities (if landlord-paid)
+- Landscaping / snow removal
+- Pest control
+- Depreciation
+
+### Condo / Townhouse (HOA)
+All single-family prompts PLUS:
+- **HOA / common charges** (monthly amount × 12) → Line 19 (Other)
+- **Special assessments** — ask: "Were there any special assessments this year? What were they for?" (Repairs = deductible, improvements = capitalize)
+- Typically NO separate landscaping, exterior maintenance, snow removal (covered by HOA)
+- Insurance may be less (HOA master policy covers building exterior)
+- Ask: "Does your HOA fee include any utilities (water, trash, etc.)?"
+
+### Co-op
+All condo prompts PLUS:
+- **Underlying mortgage interest** — co-op provides annual statement showing your share of building mortgage interest → Line 12
+- **Underlying property tax** — your share of building property tax → Line 16
+- Your maintenance/carrying charges may ALREADY include mortgage interest and property tax shares — must separate to avoid double-counting
+- Ask: "Does your co-op provide an annual tax letter showing your share of the building's mortgage interest and property taxes?"
+
+### Multi-Family (2-4 units, owner-occupied one)
+- Only deduct expenses for the rental portion
+- Split shared expenses (insurance, property tax, utilities) by unit count or square footage
+- Ask: "How many units? Which do you live in? How do you split shared expenses?"
 
 ---
 

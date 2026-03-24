@@ -33,5 +33,26 @@
     "phase": "4",
     "user_message": "I've uploaded all my docs. Here's my Monarch export too. Can you check everything matches?",
     "expected_behavior": "Skill should: (1) read Monarch CSV, (2) compare interest income in 1099-INTs against Monarch interest transactions, (3) compare dividend income against Monarch dividends, (4) flag discrepancies > $50, (5) run completeness check against accounts.json, (6) load common-gaps.md and ask about commonly missed items for user's profile, (7) generate reconciliation.json"
+  },
+  {
+    "id": "fluid-phase-document-during-interview",
+    "description": "User uploads a document during Phase 1 interview — tests fluid phase handling",
+    "phase": "1→3",
+    "user_message": "I'm married filing jointly with two kids. Oh wait, I just got my W-2 from Acme Corp — here it is. [attaches PDF]",
+    "expected_behavior": "Skill should: (1) process the W-2 immediately without insisting on completing the interview first, (2) extract W-2 fields and confirm with user, (3) save to state, (4) resume the interview where it left off, (5) report progress including the processed document"
+  },
+  {
+    "id": "cpa-package-completeness",
+    "description": "Generate CPA package and verify all required sections and safety elements",
+    "phase": "5",
+    "user_message": "All my documents are in. Generate the CPA package.",
+    "expected_behavior": "Skill should: (1) generate cpa-package.md with all 11 sections, (2) include cover letter with filing status and document count, (3) include tax estimate with disclaimer containing 'NOT tax advice', (4) show 'TBD' for any missing document amounts instead of $0, (5) include open questions from session-notes.json, (6) include year-over-year comparison if prior year data exists"
+  },
+  {
+    "id": "session-note-correction-flow",
+    "description": "User corrects a previously entered value — tests session notes",
+    "phase": "3",
+    "user_message": "Actually, I need to correct something. My Q4 federal estimated payment was $4,000 not $3,000. I just checked my bank records.",
+    "expected_behavior": "Skill should: (1) update the value in the appropriate state file, (2) append a correction entry to session-notes.json with previous_value and new_value, (3) confirm the change back to the user, (4) note this will be reflected in the CPA package"
   }
 ]

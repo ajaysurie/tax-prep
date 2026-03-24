@@ -15,16 +15,20 @@ This skill has no pre-built Python scripts. Claude's native tools handle all exe
 - Web search → WebSearch tool (Claude Code only)
 - Reconciliation → Claude reads JSON + CSV, applies thinking from SKILL.md
 - TXF export → Write tool (text format)
-- CPA package → Primary: CSV files. Enhancement: xlsx via inline Python if openpyxl available
+- CPA package → Primary: single markdown document (`cpa-package.md`). Secondary: CSV files. Enhancement: xlsx via inline Python if openpyxl available
 
 ALL intelligence lives in **SKILL.md** (workflow engine) + **references/** (knowledge base).
 
-### Five-Phase Workflow
+### Fluid Five-Phase Workflow
+Phases are a logical framework, not a rigid sequence. Users move fluidly between them — uploading a document mid-interview, adding accounts during reconciliation, etc. State files are the source of truth.
 1. **Situation Interview** — Conversational profiling. Reads `tax-data-sources.md` for baseline rates, WebSearch to verify in Code. Output: `profile.json`
 2. **Account Discovery** — Maps accounts to expected tax documents using `document-matrix.md`. Accepts Monarch CSV, manual entry, or prior-year carryforward. Output: `accounts.json`
-3. **Document Collection** — Ongoing. Reads PDFs, extracts fields, presents to user for confirmation before saving. Tracks estimated payments as first-class items. Updates `accounts.json`
+3. **Document Collection** — Ongoing. Reads PDFs (including multi-page CPA returns), extracts fields, presents to user for confirmation before saving. Property-type-aware rental prompts. Tracks estimated payments as first-class items. Updates `accounts.json`
 4. **Reconciliation** — Completeness check, Monarch cross-reference, YoY comparison, gap detection per `common-gaps.md`. Output: `reconciliation.json`
-5. **CPA Package / TurboTax Export** — CSV files (primary), xlsx (enhancement), .txf for TurboTax import. Read-back verification on TXF.
+5. **CPA Package / TurboTax Export** — Single markdown doc (primary), CSV files (secondary), xlsx (enhancement), .txf for TurboTax import. Includes CPA cover letter, rough tax estimate (with disclaimer), and session notes integration.
+
+### Session Continuity
+`session-notes.json` tracks corrections, clarifications, CPA notes, and decisions across sessions. Append-only. Read on resume to recall prior context.
 
 ### Key Directories
 - `SKILL.md` — Core workflow engine (pure XML structure, ~220 lines)
@@ -55,4 +59,5 @@ All workflow state lives in `~/.tax-prep/{year}/`. Prior year data enables YoY c
 - **One question at a time** — conversational, not form-dump
 - **Confirm before saving** — always present extracted values to user before writing to state
 - **Prior year awareness** — load last year as baseline, ask "what changed?"
-- **Cowork-first** — primary outputs (CSV, markdown) work everywhere; xlsx is an enhancement
+- **Cowork-first** — primary output is a single markdown document; CSV and xlsx are secondary
+- **Fluid phases** — phases guide suggestions, not gate actions; any action can happen at any time

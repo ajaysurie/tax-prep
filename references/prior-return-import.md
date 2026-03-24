@@ -20,6 +20,34 @@ each income line.
 
 ---
 
+## CPA-Prepared Return PDF Structure
+
+CPA returns are typically 50-200 page PDFs. Not everything is a tax form. Common structure (varies by CPA firm):
+
+| Section | What It Is | Extract? |
+|---------|-----------|----------|
+| Cover letter / transmittal | CPA's letter to client | NO — skip |
+| Filing instructions | Where/how to file, payment vouchers | NO — but note if extension was filed |
+| Engagement letter | CPA service agreement | NO — skip |
+| Form 1040 (pages 1-2) | The actual tax return | YES — primary extraction target |
+| Schedules (1, 2, 3, A, B, C, D, E, SE) | Supporting schedules | YES — extract per mappings below |
+| Form 8959, 8960 | Additional Medicare / Net Investment Income | YES — note if present |
+| Form 8962 | Premium Tax Credit | YES — if marketplace insurance |
+| State returns | State-specific forms | YES — extract income, withholding, estimated payments |
+| K-1 worksheets | CPA's K-1 analysis | MAYBE — useful for basis tracking |
+| Depreciation schedules | Per-asset depreciation detail | YES — valuable for rental properties |
+| CPA workpapers / summaries | Internal CPA calculations | NO — but may have useful YoY comparison |
+| Prior year comparison | Side-by-side YoY numbers | USEFUL — for sanity checking extraction |
+| Payment vouchers | Estimated payment stubs | NOTE — shows next year's estimated amounts |
+
+**Finding forms in the PDF:**
+- Search for "Form 1040" — usually appears after 2-5 pages of cover material
+- Each IRS form has its form number in the header/footer
+- State returns usually follow federal, separated by a state cover page
+- Depreciation schedules are often near the end, labeled "Depreciation and Amortization"
+
+---
+
 ## Form 1040 — Page 1 (Filing Status and Income)
 
 ### Filing Status (top of page 1, checkboxes)

@@ -1,10 +1,36 @@
 # CPA Handoff Format — Output Specification
 
 This reference defines the structure of the CPA handoff package generated in Phase 5.
-The primary output is CSV files (one per section). If openpyxl is available in Claude Code,
-an additional multi-tab Excel file is generated.
 
 All files are written to `~/.tax-prep/{year}/package/`.
+
+---
+
+## Primary Output: Single Structured Document
+
+The default CPA package is a single markdown file (`cpa-package.md`) containing all
+11 sections below. This is the most practical format:
+- Readable in any text editor or browser
+- Copy-pasteable into email for CPA
+- Renderable in Claude Projects / Cowork
+- Contains all the same data as the CSV files
+
+Structure the markdown file with:
+- H1: "Tax Year {year} — CPA Package for {name}"
+- H2: Each of the 11 sections below
+- Tables for tabular data (markdown tables)
+- Bullet lists for open questions and notes
+- Bold for key amounts and flags
+- A "Document Checklist" section with ✓/✗ status markers
+
+The CSV files (detailed below) are a secondary output for users who prefer spreadsheets.
+If openpyxl is available in Claude Code, an additional multi-tab Excel file is generated.
+
+---
+
+## CPA Cover Letter
+
+Include a brief cover letter at the top of the CPA package summarizing: filing status, states filed, 2-3 notable items this year, count of open questions for CPA review, and document completeness (received/total). Pull notable items from session-notes.json entries of type "cpa_note" and "decision". Claude should write this naturally — no rigid template needed.
 
 ---
 
@@ -22,7 +48,7 @@ All files are written to `~/.tax-prep/{year}/package/`.
 - Total income by category: wages, interest, dividends, capital gains, rental, business, K-1
 - Total deductions by category: mortgage interest, property tax, state/local tax, charitable
 - Estimated payments made (federal and state totals)
-- Informational tax estimate (not advice — label as "rough estimate for reference only")
+- Rough tax estimate (with prominent disclaimer — see `references/estimate-template.md`)
 - Open questions for the CPA (summarized from Section 11)
 
 ---
@@ -34,7 +60,7 @@ All files are written to `~/.tax-prep/{year}/package/`.
 | Form Type | W-2, 1099-INT, 1099-DIV, 1098, K-1, etc. |
 | Institution | Who issued the document |
 | Account | Account identifier or description |
-| Status | received, pending, not_applicable |
+| Status | received, pending, pending_third_party, pending_cpa, pending_user, not_applicable, possible, not_expected |
 | Key Amount | Primary dollar figure from the form |
 | Notes | Expected date, delays, issues |
 

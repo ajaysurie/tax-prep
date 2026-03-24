@@ -90,6 +90,8 @@ penalties (currently ~8% annualized). Catching this in the CPA package helps avo
 **Why it's missed:** People assume they don't qualify or it triggers audits (it doesn't if legitimate).
 **How to ask:** "Do you have a dedicated space in your home used exclusively for your business? How many square feet?"
 
+**S-Corp shareholders:** Cannot deduct home office on personal return. Must use accountable plan reimbursement through the S-Corp. See `references/s-corp-home-office.md`.
+
 **Two methods:**
 - Simplified: $5 per square foot, up to 300 sq ft = max $1,500
 - Regular: Actual expenses (mortgage interest, property tax, utilities, insurance, repairs) × percentage of home used for business

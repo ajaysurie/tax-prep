@@ -598,7 +598,8 @@ This is the master checklist. It maps every financial account to the tax documen
     "total_expected_documents": 10,
     "received": 5,
     "pending": 4,
-    "not_applicable": 1
+    "not_applicable": 1,
+    "possible": 0
   }
 }
 ```
@@ -622,7 +623,7 @@ This is the master checklist. It maps every financial account to the tax documen
 | `accounts[].expected_documents[].form_type` | string (enum) | **yes** | One of: `"W-2"`, `"1099-INT"`, `"1099-DIV"`, `"1099-B"`, `"1099-NEC"`, `"1099-K"`, `"1099-R"`, `"1099-SA"`, `"1099-MISC"`, `"1098"`, `"1098-T"`, `"K-1"`, `"5498"`, `"5498-SA"`, `"1095-A"`, `"1095-B"`, `"1095-C"`, `"SSA-1099"`, `"other"` |
 | `accounts[].expected_documents[].description` | string | **yes** | Human-readable description of the form |
 | `accounts[].expected_documents[].expected_by` | string (YYYY-MM-DD) | **yes** | Typical date by which this form should be available |
-| `accounts[].expected_documents[].status` | string (enum) | **yes** | One of: `"pending"`, `"received"`, `"not_applicable"` |
+| `accounts[].expected_documents[].status` | string (enum) | **yes** | One of: `"pending"`, `"received"`, `"not_applicable"`, `"pending_third_party"`, `"pending_cpa"`, `"pending_user"`, `"possible"`, `"not_expected"`. See **Document Status Values** table below. |
 | `accounts[].expected_documents[].received_date` | string (YYYY-MM-DD) or null | **yes** | Date the document was received. `null` if not yet received. |
 | `accounts[].expected_documents[].document_ref` | string or null | **yes** | References `doc_id`, which corresponds to `documents/{doc_id}.json`. `null` if not yet received. |
 | `accounts[].expected_documents[].parsed_data` | object or null | **yes** | Inline summary of extracted fields. `null` if not yet received. Full detail is in the individual document file. |
@@ -655,8 +656,22 @@ This is the master checklist. It maps every financial account to the tax documen
 | `summary.total_accounts` | integer | **yes** | Total number of accounts |
 | `summary.total_expected_documents` | integer | **yes** | Total expected tax documents |
 | `summary.received` | integer | **yes** | Documents with `status: "received"` |
-| `summary.pending` | integer | **yes** | Documents with `status: "pending"` |
-| `summary.not_applicable` | integer | **yes** | Documents with `status: "not_applicable"` |
+| `summary.pending` | integer | **yes** | Documents with any pending status: `"pending"`, `"pending_third_party"`, `"pending_cpa"`, `"pending_user"` |
+| `summary.not_applicable` | integer | **yes** | Documents with `status: "not_applicable"` or `"not_expected"` |
+| `summary.possible` | integer | **yes** | Documents with `status: "possible"` |
+
+### Document Status Values
+
+| Status | Meaning | Example |
+|--------|---------|---------|
+| `pending` | Expected, not yet received, no specific blocker | W-2 due Jan 31, it's Jan 15 |
+| `received` | Document received and parsed | W-2 uploaded and confirmed |
+| `not_applicable` | Was expected but confirmed not relevant | 1099-INT not issued (interest < $10) |
+| `pending_third_party` | Waiting on institution/entity to issue | K-1 from partnership that filed extension |
+| `pending_cpa` | CPA has or will provide this | Depreciation schedule from prior CPA |
+| `pending_user` | User needs to take action (download, request) | 1099-B available online but not yet downloaded |
+| `possible` | May or may not exist, need to investigate | Possible 1099-INT from savings account |
+| `not_expected` | Explicitly not expected this year | No distributions from retirement account |
 
 ### Notes
 
@@ -890,8 +905,9 @@ This file captures every finding from the reconciliation process: completeness g
 | `completeness` | object | **yes** | Document completeness assessment |
 | `completeness.total_expected` | integer | **yes** | From `accounts.json` summary |
 | `completeness.received` | integer | **yes** | Documents with status `"received"` |
-| `completeness.pending` | integer | **yes** | Documents still outstanding |
-| `completeness.not_applicable` | integer | **yes** | Documents determined not needed |
+| `completeness.pending` | integer | **yes** | Documents still outstanding (groups `"pending"`, `"pending_third_party"`, `"pending_cpa"`, `"pending_user"`) |
+| `completeness.not_applicable` | integer | **yes** | Documents determined not needed (groups `"not_applicable"`, `"not_expected"`) |
+| `completeness.possible` | integer | **yes** | Documents that may or may not exist (`"possible"`) |
 | `completeness.pending_items` | array | **yes** | Detail on each pending document |
 | `completeness.pending_items[].doc_id` | string | **yes** | References the doc_id in accounts.json |
 | `completeness.pending_items[].form_type` | string | **yes** | Form type |
@@ -1647,3 +1663,78 @@ The `fields` object structure is determined by `form_type`. Key field naming con
 - When a document is corrected, update the relevant fields, set `updated_at` to the current timestamp, and re-confirm with the user.
 - Multiple documents of the same form type from different institutions each get their own file (e.g., `schwab-1099div-2025.json` and `fidelity-1099div-2025.json`).
 - If a single institution issues a consolidated statement containing multiple form types (e.g., Schwab's consolidated 1099 includes 1099-B, 1099-DIV, and 1099-INT), create separate document files for each form type.
+
+---
+
+## 7. session-notes.json
+
+**Path:** `~/.tax-prep/{year}/session-notes.json`
+**Created by:** Any phase, whenever a correction, clarification, or notable decision occurs.
+**Updated by:** Append-only — new entries are added, never modified.
+
+This file tracks corrections, clarifications, CPA notes, and decisions made during the prep process. It serves as a changelog for the tax prep and provides continuity across sessions.
+
+### Example
+
+```json
+{
+  "schema_version": "1.0",
+  "tax_year": 2025,
+  "entries": [
+    {
+      "timestamp": "2026-02-15T10:30:00Z",
+      "type": "correction",
+      "category": "rental_property",
+      "summary": "Updated 123 Main St insurance from $1,800 to $2,100 — user found the actual policy renewal amount",
+      "previous_value": "1800",
+      "new_value": "2100",
+      "source": "user"
+    },
+    {
+      "timestamp": "2026-02-15T11:00:00Z",
+      "type": "cpa_note",
+      "category": "k1",
+      "summary": "K-1 from XYZ Fund shows negative Box 1. User unsure if this is correct — flag for CPA review.",
+      "source": "user"
+    },
+    {
+      "timestamp": "2026-02-20T14:15:00Z",
+      "type": "decision",
+      "category": "deductions",
+      "summary": "User choosing standard deduction over itemized. Itemized total ($9,800 SALT + $4,200 mortgage = $14,000) would exceed standard ($30,000 MFJ), but user wants CPA to confirm.",
+      "source": "skill"
+    },
+    {
+      "timestamp": "2026-03-01T09:00:00Z",
+      "type": "clarification",
+      "category": "estimated_payments",
+      "summary": "Q4 federal estimated payment was $4,000 not $3,000 — user checked bank records",
+      "previous_value": "3000",
+      "new_value": "4000",
+      "source": "user"
+    }
+  ]
+}
+```
+
+### Field Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `schema_version` | string | **yes** | Always `"1.0"` |
+| `tax_year` | integer | **yes** | The tax year |
+| `entries` | array | **yes** | Append-only list of notes |
+| `entries[].timestamp` | string (ISO 8601) | **yes** | When the note was recorded |
+| `entries[].type` | string (enum) | **yes** | One of: `"correction"`, `"clarification"`, `"cpa_note"`, `"decision"`, `"context"` |
+| `entries[].category` | string | **yes** | Which area: rental_property, k1, deductions, estimated_payments, investments, employment, etc. |
+| `entries[].summary` | string | **yes** | Human-readable description of what happened |
+| `entries[].previous_value` | string or null | no | For corrections: what the old value was |
+| `entries[].new_value` | string or null | no | For corrections: what it was changed to |
+| `entries[].source` | string | **yes** | One of: `"user"`, `"skill"`, `"document"` |
+
+### Notes
+
+- This file is append-only. Entries are never modified or deleted.
+- On session resume, read this file to recall prior corrections and context.
+- Entries of type `"cpa_note"` flow directly into the CPA package's open questions section.
+- Entries of type `"correction"` provide an audit trail for changed values.

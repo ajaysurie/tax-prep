@@ -84,23 +84,35 @@ from uploads and manual entry."
 <workflow>
 
 <phase_detection>
-Determine which phase the user is in based on existing state:
+The five phases are a logical framework, not a rigid sequence. Users move fluidly
+between them. Determine the CURRENT FOCUS based on state and user intent:
 
-1. No `profile.json` → **Phase 1** (Situation Interview)
-2. `profile.json` exists, no `accounts.json` → **Phase 2** (Account Discovery)
-3. `accounts.json` exists with pending documents → **Phase 3** (Document Collection)
-4. Most documents received or user says "reconcile" → **Phase 4** (Reconciliation)
-5. User says "package", "export", or "CPA handoff" → **Phase 5** (Package)
+**State-based defaults (what to suggest when the user returns):**
+1. No `profile.json` → suggest starting with the situation interview
+2. `profile.json` exists, no `accounts.json` → suggest account discovery
+3. `accounts.json` exists with pending documents → suggest uploading next document
+4. Most documents received → suggest reconciliation
+5. Reconciliation complete → suggest generating the package
 
-Always allow the user to jump to any phase explicitly. If the user uploads a document
-mid-conversation, handle it immediately (Phase 3 logic) regardless of current phase.
+**But always follow the user's lead:**
+- User uploads a document? Process it immediately, regardless of what phase you're "in"
+- User mentions a new account? Add it to accounts.json, even during reconciliation
+- User corrects a profile detail? Update profile.json anytime
+- User asks "what am I missing?" → run reconciliation logic on current data
+- User asks for the package? Generate it with whatever data is available (flag gaps)
+
+**Key principle:** Any action can happen at any time. The phases are a guide for
+what to suggest next, not a gate on what's allowed. State files (profile.json,
+accounts.json, documents/*.json) are the source of truth — update them whenever
+new information arrives.
+
+**Progress reporting:** After any significant action, report current state:
+"You're preparing taxes for {year}. Profile: {complete/incomplete}. Accounts:
+{X} mapped. Documents: {Y} of {Z} received. Still waiting on: {list}."
 
 **All-at-once mode:** If the user provides multiple documents at once or says they have
-everything ready, move quickly through phases 1-2 with focused questions, process all
-documents in phase 3, then proceed directly to reconciliation and packaging.
-
-Report current state: "You're preparing taxes for {year}. {X} of {Y} documents received.
-Current phase: {phase}."
+everything ready, move quickly through profiling with focused questions, process all
+documents, then proceed directly to reconciliation and packaging.
 </phase_detection>
 
 <phase number="1" name="Situation Interview">
@@ -112,6 +124,16 @@ Extract filing status, income sources, deductions, rental properties, business i
 K-1 entities, and state filings. Pre-populate `profile.json` and partial `accounts.json`.
 Present everything for confirmation, then ask follow-up questions for gaps (institution
 names, account details, current-year changes).
+
+**PDF navigation for CPA-prepared returns:** CPA returns are typically multi-page PDFs
+with forms buried after cover pages, engagement letters, and billing summaries. Strategy:
+1. Read the first 3-5 pages to find the table of contents or first form header
+2. Search for "Form 1040" or "U.S. Individual Income Tax Return" to locate page 1
+3. Look for schedule headers: "SCHEDULE A", "SCHEDULE B", "SCHEDULE C", "SCHEDULE D",
+   "SCHEDULE E", "SCHEDULE SE", "SCHEDULE 1", "SCHEDULE 2", "SCHEDULE 3"
+4. Skip pages that are: cover letters, engagement letters, invoices, state vouchers,
+   organizer questionnaires, or prior-year comparison sheets
+5. Focus extraction on IRS forms only — ignore CPA workpapers and summaries
 
 **If prior year skill data exists:** Read `~/.tax-prep/{prior_year}/profile.json`. Present
 a summary and focus on what changed rather than re-entering everything.
@@ -189,8 +211,21 @@ Read the document and extract key fields based on form type:
 **Matching:** Match each document to an expected item in `accounts.json`. Update status
 from "pending" to "received". If unexpected, ask about adding the account.
 
+**Multi-page PDF handling:** When a user uploads a PDF with multiple forms:
+1. Scan page headers to identify each form/schedule present
+2. Report what you found: "This PDF contains: Form 1040 (p3-4), Schedule A (p5),
+   Schedule B (p6), Schedule E (p7-8), three 1099s (p12-14)..."
+3. Process each form separately, matching to expected documents
+4. For consolidated brokerage PDFs (common from Schwab, Fidelity): look for the
+   summary page first, then detail pages for 1099-B transactions
+
 **Rental expenses:** After receiving mortgage docs, prompt for additional expenses per
-`references/schedule-e-guide.md` (repairs, management fees, insurance, utilities, travel).
+`references/schedule-e-guide.md`. **Tailor prompts to property type** (from profile.json):
+- Single family: standard expense list
+- Condo/townhouse: add HOA/common charges, special assessments
+- Co-op: add underlying mortgage interest, underlying property tax, maintenance allocation
+- Multi-family (owner-occupied): ask about expense allocation method
+If property type is not specified in profile.json, default to single-family expense prompts.
 
 **K-1 handling:** Read `references/k1-guide.md`. K-1s are often late — note this.
 
@@ -233,8 +268,19 @@ tax, insurance, repairs, depreciation per `references/schedule-e-guide.md`.
 <phase number="5" name="CPA Package / TurboTax Export">
 **Goal:** Produce a structured handoff package.
 
-**CPA Package:** Read `references/cpa-handoff-format.md` for the 11-section spec.
-Generate CSV files in `~/.tax-prep/{year}/package/`:
+**CPA Package:** Read `references/cpa-handoff-format.md` for the output spec.
+
+**Cover letter:** Generate a brief CPA cover letter at the top of the package summarizing
+the taxpayer's situation — filing status, states, notable items, open questions, and
+document completeness. Pull notable items from session-notes.json.
+
+**Primary output: Single structured document** at `~/.tax-prep/{year}/package/cpa-package.md`.
+This is a single markdown file with all 11 sections organized with headers, tables,
+and clear formatting. This is the most usable format — readable in any text editor,
+pasteable into email, and renderable in Cowork/Claude Projects.
+
+**Secondary output (Claude Code only):** If Bash available, also generate individual
+CSV files in `~/.tax-prep/{year}/package/`:
 1. `01-summary.csv`
 2. `02-document-checklist.csv`
 3. `03-w2-employment.csv`
@@ -247,8 +293,17 @@ Generate CSV files in `~/.tax-prep/{year}/package/`:
 10. `10-year-over-year.csv`
 11. `11-open-questions.csv`
 
-**Enhancement (Claude Code only):** If Bash + openpyxl available, generate multi-tab xlsx.
-If not, CSV files are the complete output. Last resort: single markdown file.
+**Enhancement (Claude Code only):** If Bash + openpyxl available, also generate multi-tab xlsx.
+
+**Tax estimate:** Read `references/estimate-template.md`. Include a rough directional
+tax estimate in the CPA package. This is a mechanical calculation, not advice — include
+the required disclaimer prominently. Use rates from `references/tax-data-sources.md`.
+When a line item has no source document, show "TBD — [document name] not yet received"
+instead of $0.
+
+**Session notes:** Read `session-notes.json` and incorporate relevant corrections,
+CPA notes, and decisions into the appropriate package sections. Unresolved CPA notes
+flow directly into Section 11 (Open Questions).
 
 **TurboTax Export:** Read `references/txf-field-mapping.md`. Generate `.txf` file at
 `~/.tax-prep/{year}/package/turbotax-import.txf`. **Read back and verify values match
@@ -270,8 +325,10 @@ Reference files loaded on demand — read only when the relevant phase needs the
 - `references/schedule-e-guide.md` — Rental property (Schedule E) line mapping and depreciation
 - `references/k1-guide.md` — K-1 types, key boxes, where they flow on 1040
 - `references/common-gaps.md` — Commonly missed deductions by profile type
-- `references/cpa-handoff-format.md` — 11-section CPA package specification
+- `references/cpa-handoff-format.md` — CPA package specification (single doc + CSV sections)
 - `references/txf-field-mapping.md` — TurboTax import format mapping
+- `references/s-corp-home-office.md` — S-Corp shareholder home office deduction (accountable plan method)
+- `references/estimate-template.md` — Rough directional tax estimate template with disclaimer
 - `references/state-guides/NJ.md` — New Jersey
 - `references/state-guides/NY.md` — New York
 - `references/state-guides/CA.md` — California
@@ -286,6 +343,8 @@ Reference files loaded on demand — read only when the relevant phase needs the
 - **Handle interrupts.** If the user uploads a document mid-conversation, process it immediately and return to the current phase.
 - **Never give tax advice.** Organize and categorize data only. Defer to CPA for advice.
 - **Protect personal data.** Never suggest committing state files to git. Remind users that `~/.tax-prep/` contains sensitive financial information.
+- **Log corrections and decisions.** When the user corrects a value, provides context, or a notable decision is made, append to `session-notes.json`. This provides continuity across sessions and feeds into the CPA package's open questions section.
+- **Read session notes on resume.** When resuming a session, read `session-notes.json` to recall prior corrections and context. Mention relevant notes: "Last time, you corrected the Q4 estimated payment to $4,000."
 </behavioral_guidelines>
 
 <success_criteria>
